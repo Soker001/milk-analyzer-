@@ -101,9 +101,9 @@ class DairyDashBaseTest(unittest.TestCase):
                 service = Service(fallback_paths[0])
             else:
                 try:
-                    service = Service(ChromeDriverManager().install())
+                    service = Service()
                 except Exception:
-                    raise
+                    service = Service(ChromeDriverManager().install())
         cls.driver = webdriver.Chrome(service=service, options=options)
         cls.driver.implicitly_wait(IMPLICIT_WAIT)
         cls.wait   = WebDriverWait(cls.driver, EXPLICIT_WAIT)
