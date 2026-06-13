@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Environment variables
+.env
+
+# Firebase (removed - using MongoDB now)
+firebase-service-account.json
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Build outputs
+app/build/
+app/app/build/
+app/.gradle/
+app/app/.gradle/
+.gradle/
+*.apk
+
+# Python
+__pycache__/
+*.pyc
+venv/
+
+# Logs
+*.log
+npm-debug.log*

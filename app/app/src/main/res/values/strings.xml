@@ -1,0 +1,79 @@
+<resources>
+    <string name="app_name">DairyDash</string>
+    <string name="nav_farmer_details">Farmer Details</string>
+    <string name="nav_milk_quality">Milk Quality</string>
+    <string name="nav_adulteration">Adulteration</string>
+    <string name="nav_payment">Payment System</string>
+
+    <!-- Farmer form -->
+    <string name="label_farmer_id">Farmer ID</string>
+    <string name="hint_farmer_id">e.g. F001</string>
+    <string name="label_farmer_name">Farmer Name</string>
+    <string name="hint_farmer_name">Full Name</string>
+    <string name="label_phone">Phone Number</string>
+    <string name="hint_phone">10-digit number</string>
+    <string name="label_address">Address</string>
+    <string name="hint_address">Village/City</string>
+    <string name="label_cows">No. of Cows</string>
+    <string name="label_buffaloes">No. of Buffaloes</string>
+    <string name="label_bank">Bank Account Number</string>
+    <string name="hint_bank">Account No.</string>
+    <string name="label_center">Collection Center</string>
+    <string name="hint_center">Center Name</string>
+    <string name="label_supply">Daily Milk Supply (L)</string>
+    <string name="btn_save_farmer">Save Farmer</string>
+    <string name="farmer_database">Farmer Database</string>
+    <string name="search_farmers">Search farmers…</string>
+    <string name="add_new_farmer">Add New Farmer</string>
+    <string name="confirm_delete">Are you sure you want to delete this farmer?</string>
+    <string name="delete">Delete</string>
+    <string name="cancel">Cancel</string>
+
+    <!-- Quality -->
+    <string name="quality_analysis">Quality Analysis</string>
+    <string name="label_select_farmer">Select Farmer</string>
+    <string name="select_farmer_hint">-- Select Farmer --</string>
+    <string name="label_milk_type">Milk Type</string>
+    <string name="label_quantity">Quantity (Litres)</string>
+    <string name="label_fat">Fat %</string>
+    <string name="label_snf">SNF %</string>
+    <string name="label_protein">Protein %</string>
+    <string name="label_lactose">Lactose %</string>
+    <string name="label_temperature">Temperature (°C)</string>
+    <string name="btn_analyze_quality">Analyze Quality</string>
+    <string name="quality_results">Quality Results</string>
+    <string name="instruction_adulteration">Proceed to Adulteration Detection to finalize score.</string>
+    <string name="btn_next_adulteration">Next: Adulteration Check</string>
+
+    <!-- Adulteration -->
+    <string name="contamination_check">Contamination Check</string>
+    <string name="label_water_dilution">Water Dilution (%)</string>
+    <string name="label_ph">pH Value</string>
+    <string name="label_urea">Urea Detection</string>
+    <string name="label_starch">Starch Detection</string>
+    <string name="label_detergent">Detergent Detection</string>
+    <string name="label_salt">Salt Detection</string>
+    <string name="btn_generate_final_score">Generate Final Quality Score</string>
+    <string name="final_analysis">Final Analysis</string>
+    <string name="final_quality_score">Final Quality Score</string>
+    <string name="btn_proceed_payment">Proceed to Payment</string>
+
+    <!-- Payment -->
+    <string name="smart_pricing">Smart Pricing</string>
+    <string name="label_select_state">Select State for Pricing Policy</string>
+    <string name="select_state_hint">-- Select State --</string>
+    <string name="data_from_analysis">Data Received from Analysis</string>
+    <string name="quantity_label">Quantity</string>
+    <string name="fat_label">Fat</string>
+    <string name="snf_label">SNF</string>
+    <string name="quality_score_label">Quality Score</string>
+    <string name="btn_calculate_payout">Calculate Payout</string>
+    <string name="payment_overview">Payment Overview</string>
+    <string name="formula_used">Formula Used:</string>
+    <string name="base_price_per_l">Base Price (Per L)</string>
+    <string name="quality_adj_price">Quality Adj. Price (Per L)</string>
+    <string name="total_payment">Total Payment</string>
+    <string name="btn_process_payment">Process Payment</string>
+    <string name="calculating">Calculating…</string>
+    <string name="admin">Admin</string>
+</resources>

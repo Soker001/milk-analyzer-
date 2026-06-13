@@ -1,0 +1,89 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base DairyDash style required by AAPT for dot-notation child styles -->
+    <style name="DairyDash" parent="Theme.Material3.Light.NoActionBar" />
+
+    <!-- Base application theme -->
+    <style name="Theme.DairyDash" parent="Theme.Material3.Light.NoActionBar">
+        <item name="colorPrimary">@color/primary</item>
+        <item name="colorPrimaryDark">@color/primary_dark</item>
+        <item name="colorPrimaryContainer">@color/primary_container</item>
+        <item name="colorOnPrimary">@color/on_primary</item>
+        <item name="colorSurface">@color/card_bg</item>
+        <item name="colorOnSurface">@color/text_main</item>
+        <item name="colorSurfaceVariant">@color/surface_variant</item>
+        <item name="android:colorBackground">@color/bg_color</item>
+        <item name="android:windowBackground">@color/bg_color</item>
+    </style>
+
+    <!-- Card style -->
+    <style name="DairyDash.Card" parent="Widget.Material3.CardView.Elevated">
+        <item name="cardBackgroundColor">@color/card_bg</item>
+        <item name="cardElevation">4dp</item>
+        <item name="cardCornerRadius">12dp</item>
+        <item name="strokeColor">@color/border</item>
+        <item name="strokeWidth">1dp</item>
+    </style>
+
+    <!-- Button primary -->
+    <style name="DairyDash.Button.Primary" parent="Widget.Material3.Button">
+        <item name="backgroundTint">@color/primary</item>
+        <item name="android:textColor">@color/on_primary</item>
+        <item name="android:textStyle">bold</item>
+        <item name="cornerRadius">8dp</item>
+    </style>
+
+    <!-- Button success -->
+    <style name="DairyDash.Button.Success" parent="Widget.Material3.Button">
+        <item name="backgroundTint">@color/success</item>
+        <item name="android:textColor">@color/on_primary</item>
+        <item name="cornerRadius">8dp</item>
+    </style>
+
+    <!-- Button warning -->
+    <style name="DairyDash.Button.Warning" parent="Widget.Material3.Button">
+        <item name="backgroundTint">@color/warning</item>
+        <item name="android:textColor">@color/on_primary</item>
+        <item name="cornerRadius">8dp</item>
+    </style>
+
+    <!-- Button secondary -->
+    <style name="DairyDash.Button.Secondary" parent="Widget.Material3.Button">
+        <item name="backgroundTint">@color/text_muted</item>
+        <item name="android:textColor">@color/on_primary</item>
+        <item name="cornerRadius">8dp</item>
+    </style>
+
+    <!-- TextInputLayout -->
+    <style name="DairyDash.TextInputLayout" parent="Widget.Material3.TextInputLayout.OutlinedBox">
+        <item name="boxBackgroundColor">@color/input_bg</item>
+        <item name="boxStrokeColor">@color/border_light</item>
+        <item name="hintTextColor">@color/text_muted</item>
+        <item name="android:textColorHint">@color/text_muted</item>
+    </style>
+
+    <!-- Spinner / Dropdown -->
+    <style name="DairyDash.ExposedDropdown" parent="Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu">
+        <item name="boxBackgroundColor">@color/input_bg</item>
+        <item name="boxStrokeColor">@color/border_light</item>
+        <item name="hintTextColor">@color/text_muted</item>
+    </style>
+
+    <!-- Section headers -->
+    <!-- Nav Drawer Item styles -->
+    <style name="NavItemTextActive">
+        <item name="android:textColor">@color/text_white</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="NavItemTextInactive">
+        <item name="android:textColor">@color/sidebar_item_text</item>
+        <item name="android:textSize">15sp</item>
+    </style>
+
+    <style name="DairyDash.SectionTitle">
+        <item name="android:textSize">18sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/text_dark</item>
+    </style>
+</resources>

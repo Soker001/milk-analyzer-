@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/farmerFragment">
+
+    <fragment
+        android:id="@+id/farmerFragment"
+        android:name="com.dairydash.ui.farmers.FarmerFragment"
+        android:label="Farmer Details" />
+
+    <fragment
+        android:id="@+id/qualityFragment"
+        android:name="com.dairydash.ui.quality.QualityFragment"
+        android:label="Milk Quality" />
+
+    <fragment
+        android:id="@+id/adulterationFragment"
+        android:name="com.dairydash.ui.adulteration.AdulterationFragment"
+        android:label="Adulteration" />
+
+    <fragment
+        android:id="@+id/paymentFragment"
+        android:name="com.dairydash.ui.payment.PaymentFragment"
+        android:label="Payment System" />
+
+</navigation>

@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Milk Analyzer & Smart Pricing System</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+
+    <div class="dashboard-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <i class="fa-solid fa-cow sidebar-icon"></i>
+                <h2>DairyDash</h2>
+            </div>
+            <ul class="nav-links">
+                <li class="active" data-target="farmer-details">
+                    <i class="fa-solid fa-users"></i> Farmer Details
+                </li>
+                <li data-target="milk-quality">
+                    <i class="fa-solid fa-flask"></i> Milk Quality
+                </li>
+                <li data-target="adulteration">
+                    <i class="fa-solid fa-microscope"></i> Adulteration
+                </li>
+                <li data-target="payment-system">
+                    <i class="fa-solid fa-indian-rupee-sign"></i> Payment System
+                </li>
+            </ul>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="topbar">
+                <h1 id="page-title">Farmer Details</h1>
+                <div class="user-profile">
+                    <div class="avatar"><i class="fa-solid fa-user"></i></div>
+                    <span>Admin</span>
+                </div>
+            </header>
+
+            <div class="content-area">
+
+                <!-- 1. Farmer Details Module -->
+                <section id="farmer-details" class="module-section active">
+                    <div class="card form-card">
+                        <h3><i class="fa-solid fa-user-plus"></i> Add New Farmer</h3>
+                        <form id="farmer-form">
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>Farmer ID</label>
+                                    <input type="text" id="f-id" required placeholder="e.g. F001">
+                                </div>
+                                <div class="form-group">
+                                    <label>Farmer Name</label>
+                                    <input type="text" id="f-name" required placeholder="Full Name">
+                                </div>
+                                <div class="form-group">
+                                    <label>Phone Number</label>
+                                    <input type="tel" id="f-phone" required placeholder="10-digit number">
+                                </div>
+                                <div class="form-group">
+                                    <label>Address</label>
+                                    <input type="text" id="f-address" required placeholder="Village/City">
+                                </div>
+                                <div class="form-group">
+                                    <label>No. of Cows</label>
+                                    <input type="number" id="f-cows" min="0" value="0">
+                                </div>
+                                <div class="form-group">
+                                    <label>No. of Buffaloes</label>
+                                    <input type="number" id="f-buffaloes" min="0" value="0">
+                                </div>
+                                <div class="form-group">
+                                    <label>Bank Account Number</label>
+                                    <input type="text" id="f-bank" required placeholder="Account No.">
+                                </div>
+                                <div class="form-group">
+                                    <label>Collection Center</label>
+                                    <input type="text" id="f-center" required placeholder="Center Name">
+                                </div>
+                                <div class="form-group">
+                                    <label>Daily Milk Supply (L)</label>
+                                    <input type="number" id="f-supply" min="0" step="0.1" value="0">
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Save Farmer</button>
+                        </form>
+                    </div>
+
+                    <div class="card table-card">
+                        <div class="table-header">
+                            <h3><i class="fa-solid fa-users"></i> Farmer Database</h3>
+                            <div class="search-box">
+                                <i class="fa-solid fa-search"></i>
+                                <input type="text" id="search-farmer" placeholder="Search farmers...">
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table id="farmer-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Name</th>
+                                        <th>Phone</th>
+                                        <th>Cows/Buff.</th>
+                                        <th>Daily Supply</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 2. Milk Quality Module -->
+                <section id="milk-quality" class="module-section">
+                    <div class="module-grid">
+                        <div class="card form-card">
+                            <h3><i class="fa-solid fa-flask"></i> Quality Analysis</h3>
+                            <form id="quality-form">
+                                <div class="form-group full-width">
+                                    <label>Select Farmer</label>
+                                    <select id="q-farmer" required>
+                                        <option value="">-- Select Farmer --</option>
+                                    </select>
+                                </div>
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label>Milk Type</label>
+                                        <select id="q-type">
+                                            <option value="Cow">Cow</option>
+                                            <option value="Buffalo">Buffalo</option>
+                                            <option value="Mixed">Mixed</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Quantity (Litres)</label>
+                                        <input type="number" id="q-quantity" step="0.1" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Fat %</label>
+                                        <input type="number" id="q-fat" step="0.1" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>SNF %</label>
+                                        <input type="number" id="q-snf" step="0.1" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Protein %</label>
+                                        <input type="number" id="q-protein" step="0.1">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Lactose %</label>
+                                        <input type="number" id="q-lactose" step="0.1">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Temperature (°C)</label>
+                                        <input type="number" id="q-temp" step="0.1">
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-secondary" onclick="calculateBaseQuality()">Analyze
+                                    Quality</button>
+                            </form>
+                        </div>
+                        <div class="card result-card" id="quality-result-card" style="display:none;">
+                            <h3>Quality Results</h3>
+                            <div class="score-circle">
+                                <div class="score-text">
+                                    <span id="base-score">0</span>
+                                    <small>/ 100</small>
+                                </div>
+                            </div>
+                            <div class="status-badge" id="q-status">Pending</div>
+                            <p class="instruction-text">Proceed to Adulteration Detection to finalize score.</p>
+                            <button class="btn btn-primary full-width" onclick="goToAdulteration()">Next: Adulteration
+                                Check</button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 3. Adulteration Detection Module -->
+                <section id="adulteration" class="module-section">
+                    <div class="module-grid">
+                        <div class="card form-card">
+                            <h3><i class="fa-solid fa-microscope"></i> Contamination Check</h3>
+                            <form id="adulteration-form">
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label>Water Dilution (%)</label>
+                                        <input type="number" id="a-water" min="0" max="100" value="0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>pH Value</label>
+                                        <input type="number" id="a-ph" step="0.1" value="6.6">
+                                    </div>
+                                    <div class="form-group toggle-group">
+                                        <label>Urea Detection</label>
+                                        <select id="a-urea">
+                                            <option value="No">No</option>
+                                            <option value="Yes">Yes</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group toggle-group">
+                                        <label>Starch Detection</label>
+                                        <select id="a-starch">
+                                            <option value="No">No</option>
+                                            <option value="Yes">Yes</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group toggle-group">
+                                        <label>Detergent Detection</label>
+                                        <select id="a-detergent">
+                                            <option value="No">No</option>
+                                            <option value="Yes">Yes</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group toggle-group">
+                                        <label>Salt Detection</label>
+                                        <select id="a-salt">
+                                            <option value="No">No</option>
+                                            <option value="Yes">Yes</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-warning" onclick="analyzeAdulteration()">Generate
+                                    Final Quality Score</button>
+                            </form>
+                        </div>
+
+                        <div class="card warning-card" id="adulteration-result-card" style="display:none;">
+                            <h3>Final Analysis</h3>
+                            <div class="final-score-display">
+                                <h4>Final Quality Score</h4>
+                                <h1 id="final-score">0</h1>
+                            </div>
+                            <div id="adulteration-status" class="alert pure">Pure Milk</div>
+                            <ul id="warning-messages" class="warning-list">
+                                <!-- Warnings injected via JS -->
+                            </ul>
+                            <button class="btn btn-success full-width mt-1" onclick="goToPayment()">Proceed to
+                                Payment</button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 4. Payment System Module -->
+                <section id="payment-system" class="module-section">
+                    <div class="module-grid payment-grid">
+                        <div class="card form-card">
+                            <h3><i class="fa-solid fa-indian-rupee-sign"></i> Smart Pricing</h3>
+                            <form id="payment-form">
+                                <div class="form-group full-width">
+                                    <label>Select State for Pricing Policy</label>
+                                    <select id="p-state" required>
+                                        <option value="">-- Select State --</option>
+                                        <option value="Tamil Nadu">Tamil Nadu</option>
+                                        <option value="Kerala">Kerala</option>
+                                        <option value="Karnataka">Karnataka</option>
+                                        <option value="Gujarat">Gujarat</option>
+                                        <option value="Maharashtra">Maharashtra</option>
+                                        <option value="Punjab">Punjab</option>
+                                        <option value="Haryana">Haryana</option>
+                                    </select>
+                                </div>
+                                <div class="data-summary">
+                                    <h4>Data Received from Analysis</h4>
+                                    <div class="summary-grid">
+                                        <div class="summary-item">
+                                            <span>Quantity</span>
+                                            <strong id="summary-qty">0 L</strong>
+                                        </div>
+                                        <div class="summary-item">
+                                            <span>Fat</span>
+                                            <strong id="summary-fat">0 %</strong>
+                                        </div>
+                                        <div class="summary-item">
+                                            <span>SNF</span>
+                                            <strong id="summary-snf">0 %</strong>
+                                        </div>
+                                        <div class="summary-item">
+                                            <span>Quality Score</span>
+                                            <strong id="summary-score">0 / 100</strong>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-primary full-width mt-1"
+                                    onclick="calculateFinalPrice()">Calculate Payout</button>
+                            </form>
+                        </div>
+
+                        <div class="card payment-result-card">
+                            <h3>Payment Overview</h3>
+                            <div class="payment-loading" id="payment-loading" style="display:none;">
+                                <i class="fa-solid fa-spinner fa-spin"></i> Calculating...
+                            </div>
+                            <div id="payment-details" style="display:none;">
+                                <div class="formula-box">
+                                    <small>Formula Used:</small>
+                                    <div id="p-formula-used">Select a state</div>
+                                </div>
+                                <div class="price-breakdown">
+                                    <div class="breakdown-row">
+                                        <span>Base Price (Per L)</span>
+                                        <span id="p-base-price">₹0.00</span>
+                                    </div>
+                                    <div class="breakdown-row penalty">
+                                        <span>Quality Adj. Price (Per L)</span>
+                                        <span id="p-final-price">₹0.00</span>
+                                    </div>
+                                </div>
+                                <div class="total-payout">
+                                    <span>Total Payment</span>
+                                    <h1 class="animated-counter" id="p-total">₹0.00</h1>
+                                </div>
+                                <button class="btn btn-success full-width mt-1" onclick="processPayment()">Process
+                                    Payment</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="toast"></div>
+
+    <script src="js/app.js"></script>
+</body>
+
+</html>

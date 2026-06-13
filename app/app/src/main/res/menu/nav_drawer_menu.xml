@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/farmerFragment"
+        android:icon="@drawable/ic_farmers"
+        android:title="@string/nav_farmer_details" />
+    <item
+        android:id="@+id/qualityFragment"
+        android:icon="@drawable/ic_flask"
+        android:title="@string/nav_milk_quality" />
+    <item
+        android:id="@+id/adulterationFragment"
+        android:icon="@drawable/ic_microscope"
+        android:title="@string/nav_adulteration" />
+    <item
+        android:id="@+id/paymentFragment"
+        android:icon="@drawable/ic_payment"
+        android:title="@string/nav_payment" />
+</menu>
