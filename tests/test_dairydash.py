@@ -85,25 +85,39 @@ class TestResultCollector(unittest.TestResult):
 class DairyDashBaseTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        import os, glob, shutil
         options = Options()
         options.add_argument("--headless=new")
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
         options.add_argument("--window-size=1920,1080")
         options.add_argument("--disable-gpu")
-        import os, glob
-        cached_driver = r"C:\Users\HP\.wdm\drivers\chromedriver\win64\149.0.7827.115\chromedriver.exe"
-        if os.path.exists(cached_driver):
-            service = Service(cached_driver)
+
+        # Strategy: try system PATH first (CI), then cached Windows path, then glob, then webdriver-manager
+        service = None
+
+        # 1. Check if chromedriver is on system PATH (GitHub Actions / CI)
+        if shutil.which("chromedriver"):
+            service = Service()
         else:
-            fallback_paths = glob.glob(os.path.expanduser(r"~\.wdm\**\chromedriver.exe"), recursive=True)
-            if fallback_paths:
-                service = Service(fallback_paths[0])
+            # 2. Check hardcoded Windows cached path (local dev)
+            cached_driver = r"C:\Users\HP\.wdm\drivers\chromedriver\win64\149.0.7827.115\chromedriver.exe"
+            if os.path.exists(cached_driver):
+                service = Service(cached_driver)
             else:
-                try:
-                    service = Service()
-                except Exception:
-                    service = Service(ChromeDriverManager().install())
+                # 3. Glob search for any cached chromedriver
+                fallback_paths = glob.glob(os.path.expanduser(r"~\.wdm\**\chromedriver.exe"), recursive=True)
+                if not fallback_paths:
+                    fallback_paths = glob.glob(os.path.expanduser("~/.wdm/**/chromedriver"), recursive=True)
+                if fallback_paths:
+                    service = Service(fallback_paths[0])
+                else:
+                    # 4. Last resort: let webdriver-manager download it
+                    try:
+                        service = Service(ChromeDriverManager().install())
+                    except Exception:
+                        service = Service()
+
         cls.driver = webdriver.Chrome(service=service, options=options)
         cls.driver.implicitly_wait(IMPLICIT_WAIT)
         cls.wait   = WebDriverWait(cls.driver, EXPLICIT_WAIT)
