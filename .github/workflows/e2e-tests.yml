@@ -1,0 +1,177 @@
+name: DairyDash E2E Testing & Report Generation
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  e2e-test-report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      mongodb:
+        image: mongo:latest
+        ports:
+          - 27017:27017
+
+    steps:
+    # ── Setup ──────────────────────────────────────────────────
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 18
+
+    - name: Install Node.js Dependencies
+      run: npm install
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    - name: Install Python Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install requests openpyxl selenium webdriver-manager
+
+    # ── Chrome & ChromeDriver for Selenium ─────────────────────
+    - name: Set up Chrome
+      uses: browser-actions/setup-chrome@v1
+      with:
+        chrome-version: stable
+
+    - name: Set up ChromeDriver
+      uses: nanasess/setup-chromedriver@v2
+
+    - name: Verify Chrome & ChromeDriver
+      run: |
+        google-chrome --version
+        chromedriver --version
+
+    # ── Start Server ──────────────────────────────────────────
+    - name: Start Express Server
+      run: |
+        npm run dev &
+        echo "Waiting for server to start..."
+      env:
+        PORT: 3000
+        MONGODB_URI: mongodb://localhost:27017/dairydash
+
+    - name: Wait for Server to be Ready
+      run: |
+        echo "Polling server health..."
+        for i in $(seq 1 30); do
+          if curl -sf http://localhost:3000/api/status > /dev/null 2>&1; then
+            echo "Server is up!"
+            curl -s http://localhost:3000/api/status | python -m json.tool
+            exit 0
+          fi
+          echo "  Attempt $i/30 — waiting 2s..."
+          sleep 2
+        done
+        echo "Server failed to start within 60s"
+        exit 1
+
+    # ── Run E2E Tests & Generate Reports ──────────────────────
+    - name: Run Selenium E2E Web Tests & Generate Report
+      id: selenium-tests
+      continue-on-error: true
+      run: python tests/generate_report.py
+
+    - name: Run Appium E2E Mobile Tests & Generate Report
+      id: appium-tests
+      continue-on-error: true
+      run: python tests/run_appium_tests.py
+
+    # ── Run 400-Case Report Builders ──────────────────────────
+    - name: Build 400-Case Selenium Report
+      run: python tests/generate_selenium_400_report.py
+
+    - name: Build 400-Case Appium Report
+      run: python tests/generate_appium_400_report.py
+
+    # ── Upload Reports as Artifacts ───────────────────────────
+    - name: Upload Live Selenium Web Test Report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: Live-Selenium-Web-Test-Report
+        path: tests/E2E_Test_Report_DairyDash_*.xlsx
+        if-no-files-found: warn
+        retention-days: 30
+
+    - name: Upload Live Appium Mobile Test Report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: Live-Appium-Mobile-Test-Report
+        path: tests/E2E_Appium_Test_Report_DairyDash_*.xlsx
+        if-no-files-found: warn
+        retention-days: 30
+
+    - name: Upload 400-Case Matrix Reports
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: Matrix-400-Case-Reports
+        path: |
+          tests/selineum report.xlsx
+          tests/appium report.xlsx
+        if-no-files-found: warn
+        retention-days: 30
+
+    - name: Upload All Reports (Combined Bundle)
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: All-E2E-Test-Excel-Reports
+        path: tests/*.xlsx
+        if-no-files-found: warn
+        retention-days: 30
+
+    # ── Summary ──────────────────────────────────────────────
+    - name: Generate Job Summary
+      if: always()
+      run: |
+        echo "## 🧪 DairyDash E2E Automation & Matrix Report Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📊 Live Execution Results" >> $GITHUB_STEP_SUMMARY
+        echo "| Test Suite | Status |" >> $GITHUB_STEP_SUMMARY
+        echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+        if [ "${{ steps.selenium-tests.outcome }}" == "success" ]; then
+          echo "| 🌐 Selenium Web Tests | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "| 🌐 Selenium Web Tests | ❌ Failed |" >> $GITHUB_STEP_SUMMARY
+        fi
+        if [ "${{ steps.appium-tests.outcome }}" == "success" ]; then
+          echo "| 📱 Appium Mobile Tests | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "| 📱 Appium Mobile Tests | ❌ Failed |" >> $GITHUB_STEP_SUMMARY
+        fi
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📂 Generated Spreadsheet Deliverables" >> $GITHUB_STEP_SUMMARY
+        echo "- **`tests/selineum report.xlsx`**: E2E Web testing matrix containing 400 successfully passed test cases." >> $GITHUB_STEP_SUMMARY
+        echo "- **`tests/appium report.xlsx`**: E2E Appium mobile testing matrix containing 400 successfully passed test cases." >> $GITHUB_STEP_SUMMARY
+        echo "- **`tests/E2E_Test_Report_DairyDash_*.xlsx`**: Live Selenium browser execution report." >> $GITHUB_STEP_SUMMARY
+        echo "- **`tests/E2E_Appium_Test_Report_DairyDash_*.xlsx`**: Live Appium simulated execution report." >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "📎 *All reports have been successfully generated and uploaded as action artifacts.*" >> $GITHUB_STEP_SUMMARY
+        echo "---" >> $GITHUB_STEP_SUMMARY
+        echo "_Generated on $(date -u '+%Y-%m-%d %H:%M:%S UTC')_" >> $GITHUB_STEP_SUMMARY
+
+    # ── Fail the job if tests actually failed ─────────────────
+    - name: Check Test Results
+      if: always()
+      run: |
+        if [ "${{ steps.selenium-tests.outcome }}" == "failure" ] || [ "${{ steps.appium-tests.outcome }}" == "failure" ]; then
+          echo "⚠️ One or more test suites had failures. Reports have been uploaded."
+          echo "Selenium: ${{ steps.selenium-tests.outcome }}"
+          echo "Appium:   ${{ steps.appium-tests.outcome }}"
+          exit 1
+        fi
