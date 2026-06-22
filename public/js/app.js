@@ -42,27 +42,42 @@ const qFarmerSelect = document.getElementById('q-farmer');
 async function fetchFarmers() {
     try {
         const response = await fetch(`${API_URL}/farmers`);
+        if (!response.ok) throw new Error(`Server error: ${response.status}`);
         farmers = await response.json();
         renderFarmers();
         populateFarmerSelect();
     } catch (error) {
         console.error('Error fetching farmers:', error);
-        showToast('Failed to load farmers', 'error');
+        showToast('Failed to load farmers from server', 'error');
     }
 }
 
 function renderFarmers() {
     farmerTableBody.innerHTML = '';
+    if (farmers.length === 0) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td colspan="6" style="text-align:center;color:#888;padding:20px;">No farmers registered yet. Add one above!</td>';
+        farmerTableBody.appendChild(tr);
+        return;
+    }
     farmers.forEach(farmer => {
+        // MongoDB returns _id mapped as 'id' in our server response
+        const farmerId = farmer['f-id'] || farmer.farmerId || '';
+        const farmerDbId = farmer.id || farmer._id || '';
+        const farmerName = farmer['f-name'] || farmer.name || '';
+        const farmerPhone = farmer['f-phone'] || farmer.phone || '';
+        const farmerCows = farmer['f-cows'] !== undefined ? farmer['f-cows'] : (farmer.cows || 0);
+        const farmerBuffaloes = farmer['f-buffaloes'] !== undefined ? farmer['f-buffaloes'] : (farmer.buffaloes || 0);
+        const farmerSupply = farmer['f-supply'] !== undefined ? farmer['f-supply'] : (farmer.dailySupply || 0);
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td>${farmer['f-id'] || farmer.id}</td>
-            <td>${farmer['f-name'] || farmer.name}</td>
-            <td>${farmer['f-phone'] || farmer.phone}</td>
-            <td>${farmer.cows || farmer['f-cows']} / ${farmer.buffaloes || farmer['f-buffaloes']}</td>
-            <td>${farmer.supply || farmer['f-supply']} L</td>
+            <td>${farmerId}</td>
+            <td>${farmerName}</td>
+            <td>${farmerPhone}</td>
+            <td>${farmerCows} / ${farmerBuffaloes}</td>
+            <td>${farmerSupply} L</td>
             <td class="action-btns">
-                <button class="icon-btn delete" onclick="deleteFarmer('${farmer.id}')"><i class="fa-solid fa-trash"></i></button>
+                <button class="icon-btn delete" onclick="deleteFarmer('${farmerDbId}')"><i class="fa-solid fa-trash"></i></button>
             </td>
         `;
         farmerTableBody.appendChild(tr);
@@ -83,17 +98,37 @@ function populateFarmerSelect() {
 
 farmerForm.addEventListener('submit', async (e) => {
     e.preventDefault();
+
+    // Basic client-side validation
+    const fId = document.getElementById('f-id').value.trim();
+    const fName = document.getElementById('f-name').value.trim();
+    const fPhone = document.getElementById('f-phone').value.trim();
+    const fAddress = document.getElementById('f-address').value.trim();
+    const fBank = document.getElementById('f-bank').value.trim();
+    const fCenter = document.getElementById('f-center').value.trim();
+
+    if (!fId || !fName || !fPhone || !fAddress || !fBank || !fCenter) {
+        showToast('Please fill in all required fields', 'error');
+        return;
+    }
+
     const newFarmer = {
-        'f-id': document.getElementById('f-id').value,
-        'f-name': document.getElementById('f-name').value,
-        'f-phone': document.getElementById('f-phone').value,
-        'f-address': document.getElementById('f-address').value,
-        'f-cows': document.getElementById('f-cows').value,
-        'f-buffaloes': document.getElementById('f-buffaloes').value,
-        'f-bank': document.getElementById('f-bank').value,
-        'f-center': document.getElementById('f-center').value,
-        'f-supply': document.getElementById('f-supply').value
+        'f-id': fId,
+        'f-name': fName,
+        'f-phone': fPhone,
+        'f-address': fAddress,
+        'f-cows': parseInt(document.getElementById('f-cows').value) || 0,
+        'f-buffaloes': parseInt(document.getElementById('f-buffaloes').value) || 0,
+        'f-bank': fBank,
+        'f-center': fCenter,
+        'f-supply': parseFloat(document.getElementById('f-supply').value) || 0
     };
+
+    // Show loading state on button
+    const submitBtn = farmerForm.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = 'Saving...';
+    submitBtn.disabled = true;
 
     try {
         const response = await fetch(`${API_URL}/farmers`, {
@@ -101,24 +136,44 @@ farmerForm.addEventListener('submit', async (e) => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(newFarmer)
         });
+
+        const data = await response.json();
+
         if (response.ok) {
-            showToast('Farmer added successfully!');
+            showToast(`Farmer "${fName}" added successfully! ✅`);
             farmerForm.reset();
             fetchFarmers();
+        } else {
+            // Show the actual server error message (e.g. "Farmer ID already exists")
+            const errorMsg = data.error || 'Failed to add farmer. Please try again.';
+            showToast(errorMsg, 'error');
         }
     } catch (error) {
-        showToast('Error adding farmer', 'error');
+        console.error('Save farmer error:', error);
+        showToast('Network error — could not connect to server.', 'error');
+    } finally {
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
     }
 });
 
 async function deleteFarmer(id) {
-    if(confirm('Are you sure you want to delete this farmer?')) {
+    if (!id) {
+        showToast('Cannot delete: invalid farmer ID', 'error');
+        return;
+    }
+    if (confirm('Are you sure you want to delete this farmer?')) {
         try {
-            await fetch(`${API_URL}/farmers/${id}`, { method: 'DELETE' });
-            showToast('Farmer deleted');
-            fetchFarmers();
+            const response = await fetch(`${API_URL}/farmers/${id}`, { method: 'DELETE' });
+            if (response.ok) {
+                showToast('Farmer deleted successfully');
+                fetchFarmers();
+            } else {
+                showToast('Failed to delete farmer', 'error');
+            }
         } catch (error) {
-            showToast('Error deleting farmer', 'error');
+            console.error('Delete farmer error:', error);
+            showToast('Network error — could not delete farmer', 'error');
         }
     }
 }

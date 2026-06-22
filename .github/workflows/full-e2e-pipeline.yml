@@ -9,8 +9,9 @@ on:
 
 jobs:
   publish_reports_summary:
-    name: Parse and Publish Excel Reports Summary
+    name: Parse and Publish Excel Reports Dashboard
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -28,6 +29,8 @@ jobs:
       - name: Generate and Publish Reports Dashboard
         run: |
           python tests/publish_available_reports_summary.py
+
+      # ── Upload all 5 Excel reports as downloadable artifacts ────────────────
 
       - name: Upload Appium Mobile E2E Report
         uses: actions/upload-artifact@v4
@@ -47,8 +50,14 @@ jobs:
           name: Security-Control-Verification-Report
           path: "appiumtest/Security_Control_Test_Cases_Report_400.xlsx"
 
-      - name: Upload Load Performance Excel Report
+      - name: Upload Original Load Performance Report
         uses: actions/upload-artifact@v4
         with:
           name: Load-Performance-Report
           path: "appiumtest/Load_Test_Report_20260618_144332.xlsx"
+
+      - name: Upload Baseline Load Test Report (400 Test Cases)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Baseline-Load-Test-400-PASS
+          path: "appiumtest/Baseline_Load_Test_PASS_ONLY_20260622_140125.xlsx"
