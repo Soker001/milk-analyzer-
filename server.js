@@ -191,7 +191,8 @@ app.get('/api/payments/farmer/:farmerId', async (req, res) => {
 app.post('/api/calculate-price', (req, res) => {
     const inputData = req.body;
     
-    const pythonProcess = spawn('python', ['pricing_engine.py']);
+    const pythonCmd = process.platform === 'win32' ? 'python' : 'python3';
+    const pythonProcess = spawn(pythonCmd, ['pricing_engine.py']);
     
     let dataString = '';
     let errorString = '';
@@ -222,6 +223,20 @@ app.post('/api/calculate-price', (req, res) => {
         } catch (err) {
             res.status(500).json({ error: 'Invalid response from pricing engine', raw: dataString });
         }
+    });
+});
+
+// ---------------------------------------------------------
+// FIREBASE CONFIG
+// ---------------------------------------------------------
+app.get('/api/firebase-config', (req, res) => {
+    res.json({
+        apiKey: process.env.FIREBASE_API_KEY || "",
+        authDomain: process.env.FIREBASE_AUTH_DOMAIN || "",
+        projectId: process.env.FIREBASE_PROJECT_ID || "",
+        storageBucket: process.env.FIREBASE_STORAGE_BUCKET || "",
+        messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID || "",
+        appId: process.env.FIREBASE_APP_ID || ""
     });
 });
 
