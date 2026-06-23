@@ -1,63 +1,162 @@
-name: DairyDash Automation & Security Verification Dashboard
+name: "🧪 DairyDash — Full Test Reports Dashboard"
 
+# ─────────────────────────────────────────────────────────────────────────────
+# BRANCH STRATEGY
+#   main        → Production branch. Auto-triggers on push & PR.
+#   develop     → Integration branch. Auto-triggers on push & PR.
+#   feature/**  → Feature branches. Auto-triggers on push.
+#   hotfix/**   → Hotfix branches. Auto-triggers on push & PR to main.
+#   Manual      → Can be triggered manually on any branch via workflow_dispatch.
+# ─────────────────────────────────────────────────────────────────────────────
 on:
   push:
-    branches: [ main, master ]
+    branches:
+      - main
+      - master
+      - develop
+      - "feature/**"
+      - "hotfix/**"
   pull_request:
-    branches: [ main, master ]
+    branches:
+      - main
+      - master
+      - develop
   workflow_dispatch:
+    inputs:
+      branch_note:
+        description: "Optional note about why you are running this manually"
+        required: false
+        default: "Manual trigger"
 
 jobs:
-  publish_reports_summary:
-    name: Parse and Publish Excel Reports Dashboard
+  # ═══════════════════════════════════════════════════════════════════════════
+  # JOB 1: UPLOAD & PUBLISH ALL 4 REPORTS
+  # ═══════════════════════════════════════════════════════════════════════════
+  publish_reports:
+    name: "📊 Parse & Publish 4 Test Reports to Summary"
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Code
+      # ── 1. Checkout ────────────────────────────────────────────────────────
+      - name: "🔀 Checkout Repository"
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      # ── 2. Python Setup ────────────────────────────────────────────────────
+      - name: "🐍 Set up Python 3.12"
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: "3.12"
 
-      - name: Install Dependencies
+      - name: "📦 Install Python Dependencies"
         run: |
           python -m pip install --upgrade pip
           pip install openpyxl pandas
 
-      - name: Generate and Publish Reports Dashboard
+      # ── 3. Verify report files exist ───────────────────────────────────────
+      - name: "🔍 Verify Report Files"
         run: |
-          python tests/publish_available_reports_summary.py
+          echo "Checking for required report files..."
+          FILES=(
+            "appiumtest/appium report.xlsx"
+            "appiumtest/selineum report.xlsx"
+            "appiumtest/Baseline_Load_Test_PASS_ONLY_20260622_140125.xlsx"
+            "appiumtest/Security_Control_Test_Cases_Report_400_v2.xlsx"
+          )
+          ALL_FOUND=true
+          for f in "${FILES[@]}"; do
+            if [ -f "$f" ]; then
+              SIZE=$(du -sh "$f" | cut -f1)
+              echo "  ✅ FOUND ($SIZE): $f"
+            else
+              echo "  ❌ MISSING: $f"
+              ALL_FOUND=false
+            fi
+          done
+          if [ "$ALL_FOUND" = false ]; then
+            echo "⚠️ Some report files are missing but workflow will continue."
+          else
+            echo "✅ All 4 report files are present!"
+          fi
 
-      # ── Upload all 5 Excel reports as downloadable artifacts ────────────────
+      # ── 4. Parse reports and write to GitHub Step Summary ─────────────────
+      - name: "📝 Generate Full Report Dashboard (Step Summary)"
+        run: python appiumtest/publish_all_reports.py
 
-      - name: Upload Appium Mobile E2E Report
+      # ── 5. Upload all 4 reports as downloadable artifacts ─────────────────
+      - name: "📱 Upload — Appium Mobile E2E Report"
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Appium-Mobile-E2E-Report
+          name: "Appium-Mobile-E2E-Report-400-Cases"
           path: "appiumtest/appium report.xlsx"
+          if-no-files-found: warn
+          retention-days: 90
 
-      - name: Upload Selenium Web E2E Report
+      - name: "🌐 Upload — Selenium Web E2E Report"
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Selenium-Web-E2E-Report
+          name: "Selenium-Web-E2E-Report-400-Cases"
           path: "appiumtest/selineum report.xlsx"
+          if-no-files-found: warn
+          retention-days: 90
 
-      - name: Upload Security Control Verification Report
+      - name: "⚡ Upload — Baseline Load Test Report (PASS ONLY)"
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Security-Control-Verification-Report
-          path: "appiumtest/Security_Control_Test_Cases_Report_400.xlsx"
-
-      - name: Upload Original Load Performance Report
-        uses: actions/upload-artifact@v4
-        with:
-          name: Load-Performance-Report
-          path: "appiumtest/Load_Test_Report_20260618_144332.xlsx"
-
-      - name: Upload Baseline Load Test Report (400 Test Cases)
-        uses: actions/upload-artifact@v4
-        with:
-          name: Baseline-Load-Test-400-PASS
+          name: "Baseline-Load-Test-PASS-ONLY"
           path: "appiumtest/Baseline_Load_Test_PASS_ONLY_20260622_140125.xlsx"
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: "🛡️ Upload — Security Control Test Cases Report (v2)"
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: "Security-Control-Test-Cases-Report-400-v2"
+          path: "appiumtest/Security_Control_Test_Cases_Report_400_v2.xlsx"
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: "📦 Upload — All 4 Reports (Combined Bundle)"
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: "ALL-4-DairyDash-Test-Reports"
+          path: |
+            appiumtest/appium report.xlsx
+            appiumtest/selineum report.xlsx
+            appiumtest/Baseline_Load_Test_PASS_ONLY_20260622_140125.xlsx
+            appiumtest/Security_Control_Test_Cases_Report_400_v2.xlsx
+          if-no-files-found: warn
+          retention-days: 90
+
+      # ── 6. Append branch & trigger info to summary ─────────────────────────
+      - name: "🌿 Append Branch & Trigger Info to Summary"
+        if: always()
+        run: |
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "## 🌿 Workflow Trigger & Branch Information" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| 🔀 Branch | \`${{ github.ref_name }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| ⚡ Trigger | \`${{ github.event_name }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🔨 Commit SHA | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| 👤 Triggered By | \`${{ github.actor }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| 📁 Repository | \`${{ github.repository }}\` |" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "| 📝 Manual Note | ${{ github.event.inputs.branch_note }} |" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🌿 Branch Strategy Reference" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Branch Pattern | Purpose | Auto-Triggers |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| \`main\` / \`master\` | 🚀 Production — stable releases | Push + PR |" >> $GITHUB_STEP_SUMMARY
+          echo "| \`develop\` | 🔧 Integration — merges from feature branches | Push + PR |" >> $GITHUB_STEP_SUMMARY
+          echo "| \`feature/**\` | ✨ Feature development | Push only |" >> $GITHUB_STEP_SUMMARY
+          echo "| \`hotfix/**\` | 🚑 Emergency production fixes | Push + PR to main |" >> $GITHUB_STEP_SUMMARY
+          echo "| Any branch | 🖱️ Manual run via workflow_dispatch | Manual only |" >> $GITHUB_STEP_SUMMARY

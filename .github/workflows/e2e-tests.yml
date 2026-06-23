@@ -1,10 +1,26 @@
 name: DairyDash E2E Testing & Report Generation
 
+# ─────────────────────────────────────────────────────────────────────────────
+# BRANCH STRATEGY
+#   main / master → Production. Runs E2E on push & PR.
+#   develop       → Integration. Runs E2E on push & PR.
+#   feature/**    → Feature branches. Runs E2E on push.
+#   hotfix/**     → Hotfixes. Runs E2E on push & PR to main.
+# ─────────────────────────────────────────────────────────────────────────────
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
+      - master
+      - develop
+      - "feature/**"
+      - "hotfix/**"
   pull_request:
-    branches: [ main ]
+    branches:
+      - main
+      - master
+      - develop
+  workflow_dispatch:
 
 jobs:
   e2e-test-report:
