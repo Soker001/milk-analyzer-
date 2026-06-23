@@ -4,6 +4,57 @@ var currentQualityData = {};
 
 const API_URL = '/api';
 
+// --- Firebase Authentication Guard ---
+let firebaseAuth = null;
+
+async function checkAuthentication() {
+    try {
+        const response = await fetch('/api/firebase-config');
+        const config = await response.json();
+
+        // If Firebase credentials are not set in .env, skip auth guard to allow access
+        if (!config.apiKey) {
+            console.warn("⚠️ Firebase credentials not configured in .env. Skipping login guard.");
+            return;
+        }
+
+        // Initialize Firebase
+        firebase.initializeApp(config);
+        firebaseAuth = firebase.auth();
+
+        // Listen for authentication changes
+        firebaseAuth.onAuthStateChanged((user) => {
+            if (!user) {
+                // Redirect to login page if unauthorized
+                window.location.href = 'login.html';
+            } else {
+                // Show user email in topbar
+                const emailSpan = document.getElementById('user-email');
+                if (emailSpan) {
+                    emailSpan.textContent = user.email;
+                }
+            }
+        });
+
+        // Setup Logout event listener
+        const logoutBtn = document.getElementById('btn-logout');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', async () => {
+                try {
+                    await firebaseAuth.signOut();
+                } catch (err) {
+                    console.error("Sign out failed:", err);
+                }
+            });
+        }
+
+    } catch (err) {
+        console.error("Error setting up Firebase Authentication:", err);
+    }
+}
+
+checkAuthentication();
+
 // --- UI Navigation ---
 document.querySelectorAll('.nav-links li').forEach(item => {
     item.addEventListener('click', () => {

@@ -39,9 +39,14 @@
         <main class="main-content">
             <header class="topbar">
                 <h1 id="page-title">Farmer Details</h1>
-                <div class="user-profile">
-                    <div class="avatar"><i class="fa-solid fa-user"></i></div>
-                    <span>Admin</span>
+                <div class="user-profile" style="display: flex; align-items: center; gap: 15px;">
+                    <div style="display: flex; align-items: center; gap: 8px; border-right: 1px solid rgba(255,255,255,0.1); padding-right: 15px;">
+                        <div class="avatar"><i class="fa-solid fa-user"></i></div>
+                        <span id="user-email" style="font-weight: 500;">Admin</span>
+                    </div>
+                    <button id="btn-logout" class="btn" style="background: #ef4444; color: white; border: none; padding: 8px 14px; font-size: 0.85rem; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-weight: 600; transition: background 0.3s;" onmouseover="this.style.background='#dc2626'" onmouseout="this.style.background='#ef4444'">
+                        <i class="fa-solid fa-right-from-bracket"></i> Logout
+                    </button>
                 </div>
             </header>
 
@@ -334,6 +339,10 @@
 
     <!-- Notification Toast -->
     <div id="toast" class="toast"></div>
+
+    <!-- Firebase Compat SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 
     <script src="js/app.js"></script>
 </body>

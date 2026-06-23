@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DairyDash — Access Portal</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0b111e;
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --secondary: #06b6d4;
+            --card-bg: rgba(17, 24, 39, 0.65);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Outfit', sans-serif;
+            user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            position: relative;
+            perspective: 1000px;
+        }
+
+        /* ── 3D Animated Background ── */
+        .bg-3d-scene {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .cube {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            transform-style: preserve-3d;
+            animation: rotateCube 15s infinite linear;
+            opacity: 0.15;
+        }
+
+        .cube-1 { top: 15%; left: 15%; animation-duration: 20s; }
+        .cube-2 { top: 75%; left: 80%; width: 120px; height: 120px; animation-duration: 28s; animation-direction: reverse; }
+        .cube-3 { top: 60%; left: 10%; width: 60px; height: 60px; animation-duration: 12s; }
+        .cube-4 { top: 20%; left: 85%; width: 90px; height: 90px; animation-duration: 24s; }
+
+        .cube-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border: 2px solid var(--primary);
+            background: rgba(99, 102, 241, 0.05);
+            box-shadow: 0 0 15px rgba(99, 102, 241, 0.2);
+        }
+
+        .cube-face.front  { transform: translateZ(40px); }
+        .cube-face.back   { transform: rotateY(180deg) translateZ(40px); }
+        .cube-face.left   { transform: rotateY(-90deg) translateZ(40px); }
+        .cube-face.right  { transform: rotateY(90deg) translateZ(40px); }
+        .cube-face.top    { transform: rotateX(90deg) translateZ(40px); }
+        .cube-face.bottom { transform: rotateX(-90deg) translateZ(40px); }
+
+        .cube-2 .cube-face {
+            border-color: var(--secondary);
+            background: rgba(6, 182, 212, 0.05);
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.2);
+        }
+        .cube-2 .cube-face.front  { transform: translateZ(60px); }
+        .cube-2 .cube-face.back   { transform: rotateY(180deg) translateZ(60px); }
+        .cube-2 .cube-face.left   { transform: rotateY(-90deg) translateZ(60px); }
+        .cube-2 .cube-face.right  { transform: rotateY(90deg) translateZ(60px); }
+        .cube-2 .cube-face.top    { transform: rotateX(90deg) translateZ(60px); }
+        .cube-2 .cube-face.bottom { transform: rotateX(-90deg) translateZ(60px); }
+
+        .cube-3 .cube-face.front  { transform: translateZ(30px); }
+        .cube-3 .cube-face.back   { transform: rotateY(180deg) translateZ(30px); }
+        .cube-3 .cube-face.left   { transform: rotateY(-90deg) translateZ(30px); }
+        .cube-3 .cube-face.right  { transform: rotateY(90deg) translateZ(30px); }
+        .cube-3 .cube-face.top    { transform: rotateX(90deg) translateZ(30px); }
+        .cube-3 .cube-face.bottom { transform: rotateX(-90deg) translateZ(30px); }
+
+        .cube-4 .cube-face.front  { transform: translateZ(45px); }
+        .cube-4 .cube-face.back   { transform: rotateY(180deg) translateZ(45px); }
+        .cube-4 .cube-face.left   { transform: rotateY(-90deg) translateZ(45px); }
+        .cube-4 .cube-face.right  { transform: rotateY(90deg) translateZ(45px); }
+        .cube-4 .cube-face.top    { transform: rotateX(90deg) translateZ(45px); }
+        .cube-4 .cube-face.bottom { transform: rotateX(-90deg) translateZ(45px); }
+
+        @keyframes rotateCube {
+            0% { transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg); }
+            100% { transform: rotateX(360deg) rotateY(360deg) rotateZ(360deg); }
+        }
+
+        /* ── Login Container (3D Tilt Target) ── */
+        .login-wrapper {
+            position: relative;
+            z-index: 10;
+            width: 440px;
+            max-width: 90%;
+            transform-style: preserve-3d;
+            transition: transform 0.1s ease-out;
+        }
+
+        /* Ambient Glow Behind Card */
+        .glow-sphere {
+            position: absolute;
+            width: 250px;
+            height: 250px;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.4) 0%, rgba(0,0,0,0) 70%);
+            border-radius: 50%;
+            z-index: -1;
+            filter: blur(20px);
+        }
+        .glow-left { top: -60px; left: -80px; background: radial-gradient(circle, rgba(6, 182, 212, 0.3) 0%, rgba(0,0,0,0) 70%); }
+        .glow-right { bottom: -60px; right: -80px; }
+
+        .login-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 24px;
+            padding: 40px;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+            transform: translateZ(30px); /* Pushes content out in 3D */
+            transform-style: preserve-3d;
+        }
+
+        .header-logo {
+            text-align: center;
+            margin-bottom: 30px;
+            transform: translateZ(50px);
+        }
+
+        .header-logo i {
+            font-size: 3rem;
+            background: linear-gradient(135deg, var(--secondary), var(--primary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 12px;
+            filter: drop-shadow(0 0 10px rgba(99, 102, 241, 0.3));
+        }
+
+        .header-logo h2 {
+            color: var(--text-main);
+            font-size: 1.8rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        .header-logo p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        /* ── Input Groups ── */
+        .form-group {
+            margin-bottom: 22px;
+            position: relative;
+            transform: translateZ(40px);
+        }
+
+        .form-group label {
+            display: block;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-bottom: 8px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        .input-wrapper i {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            transition: color 0.3s;
+        }
+
+        .input-wrapper input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 14px 16px 14px 46px;
+            color: var(--text-main);
+            font-size: 0.95rem;
+            outline: none;
+            transition: all 0.3s;
+        }
+
+        .input-wrapper input:focus {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: var(--primary);
+            box-shadow: 0 0 12px rgba(99, 102, 241, 0.25);
+        }
+
+        .input-wrapper input:focus + i {
+            color: var(--primary);
+        }
+
+        /* Toggle Sign-In / Sign-Up */
+        .toggle-mode {
+            text-align: center;
+            margin-top: 24px;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            transform: translateZ(35px);
+        }
+
+        .toggle-mode span {
+            color: var(--primary);
+            cursor: pointer;
+            font-weight: 600;
+            transition: color 0.3s;
+        }
+
+        .toggle-mode span:hover {
+            color: var(--secondary);
+            text-decoration: underline;
+        }
+
+        /* ── Buttons ── */
+        .btn-submit {
+            width: 100%;
+            background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+            border: none;
+            color: white;
+            padding: 14px;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 10px;
+            transform: translateZ(45px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+        }
+
+        .btn-submit:hover {
+            transform: translateZ(45px) translateY(-2px);
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+            background: linear-gradient(135deg, var(--primary-hover), #4338ca);
+        }
+
+        .btn-submit:active {
+            transform: translateZ(45px) translateY(0);
+        }
+
+        /* Loader Icon inside button */
+        .btn-submit .spinner {
+            display: none;
+            animation: spin 1s infinite linear;
+        }
+
+        @keyframes spin {
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Setup Notification Card */
+        .setup-notice {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px dashed rgba(239, 68, 68, 0.4);
+            border-radius: 12px;
+            padding: 16px;
+            color: #fca5a5;
+            font-size: 0.85rem;
+            margin-bottom: 20px;
+            display: none;
+            transform: translateZ(35px);
+        }
+
+        .setup-notice h4 {
+            font-weight: 700;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .setup-notice code {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            color: #fff;
+        }
+
+        /* ── Toasts ── */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: #1f2937;
+            border-left: 4px solid var(--primary);
+            color: var(--text-main);
+            padding: 16px 24px;
+            border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 999;
+            font-weight: 500;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .toast.success { border-left-color: #10b981; }
+        .toast.error { border-left-color: #ef4444; }
+    </style>
+</head>
+<body>
+
+    <!-- 3D Scene Background -->
+    <div class="bg-3d-scene">
+        <div class="cube cube-1">
+            <div class="cube-face front"></div>
+            <div class="cube-face back"></div>
+            <div class="cube-face left"></div>
+            <div class="cube-face right"></div>
+            <div class="cube-face top"></div>
+            <div class="cube-face bottom"></div>
+        </div>
+        <div class="cube cube-2">
+            <div class="cube-face front"></div>
+            <div class="cube-face back"></div>
+            <div class="cube-face left"></div>
+            <div class="cube-face right"></div>
+            <div class="cube-face top"></div>
+            <div class="cube-face bottom"></div>
+        </div>
+        <div class="cube cube-3">
+            <div class="cube-face front"></div>
+            <div class="cube-face back"></div>
+            <div class="cube-face left"></div>
+            <div class="cube-face right"></div>
+            <div class="cube-face top"></div>
+            <div class="cube-face bottom"></div>
+        </div>
+        <div class="cube cube-4">
+            <div class="cube-face front"></div>
+            <div class="cube-face back"></div>
+            <div class="cube-face left"></div>
+            <div class="cube-face right"></div>
+            <div class="cube-face top"></div>
+            <div class="cube-face bottom"></div>
+        </div>
+    </div>
+
+    <!-- Login Container -->
+    <div class="login-wrapper" id="tilt-card">
+        <div class="glow-sphere glow-left"></div>
+        <div class="glow-sphere glow-right"></div>
+        
+        <div class="login-card">
+            <div class="header-logo">
+                <i class="fa-solid fa-cow"></i>
+                <h2>DairyDash</h2>
+                <p id="sub-title">Sign in to manage smart pricing system</p>
+            </div>
+
+            <!-- Firebase Setup Instructions (Shown only if Config is missing) -->
+            <div class="setup-notice" id="setup-notice">
+                <h4><i class="fa-solid fa-triangle-exclamation"></i> Firebase Not Configured</h4>
+                <p>Please configure Firebase API values in your <code>.env</code> file. Check console logs for help.</p>
+            </div>
+
+            <!-- Form -->
+            <form id="auth-form">
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <div class="input-wrapper">
+                        <input type="email" id="email" required placeholder="name@dairy.com">
+                        <i class="fa-solid fa-envelope"></i>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <div class="input-wrapper">
+                        <input type="password" id="password" required placeholder="••••••••">
+                        <i class="fa-solid fa-lock"></i>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-submit" id="btn-submit">
+                    <span id="btn-text">Sign In</span>
+                    <i class="fa-solid fa-spinner spinner" id="btn-spinner"></i>
+                </button>
+            </form>
+
+            <div class="toggle-mode">
+                <p id="toggle-text">Don't have an account? <span id="toggle-link" onclick="toggleAuthMode()">Sign Up</span></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast">
+        <i id="toast-icon" class="fa-solid"></i>
+        <span id="toast-message"></span>
+    </div>
+
+    <!-- Firebase Compat SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+
+    <script>
+        // ── Form State & UI Mode ──
+        let isSignUpMode = false;
+        const authForm = document.getElementById('auth-form');
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+        const btnText = document.getElementById('btn-text');
+        const btnSpinner = document.getElementById('btn-spinner');
+        const subTitle = document.getElementById('sub-title');
+        const toggleLink = document.getElementById('toggle-link');
+        const toggleText = document.getElementById('toggle-text');
+        const setupNotice = document.getElementById('setup-notice');
+
+        // Toast Helper
+        function showToast(message, type = 'error') {
+            const toast = document.getElementById('toast');
+            const icon = document.getElementById('toast-icon');
+            const msgSpan = document.getElementById('toast-message');
+
+            toast.className = `toast show ${type}`;
+            msgSpan.textContent = message;
+
+            if (type === 'success') {
+                icon.className = 'fa-solid fa-circle-check';
+            } else {
+                icon.className = 'fa-solid fa-circle-exclamation';
+            }
+
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 4000);
+        }
+
+        // Toggle Sign-In / Sign-Up Interface
+        function toggleAuthMode() {
+            isSignUpMode = !isSignUpMode;
+            if (isSignUpMode) {
+                subTitle.textContent = "Create an account to get started";
+                btnText.textContent = "Sign Up";
+                toggleText.innerHTML = `Already have an account? <span id="toggle-link" onclick="toggleAuthMode()">Sign In</span>`;
+            } else {
+                subTitle.textContent = "Sign in to manage smart pricing system";
+                btnText.textContent = "Sign In";
+                toggleText.innerHTML = `Don't have an account? <span id="toggle-link" onclick="toggleAuthMode()">Sign Up</span>`;
+            }
+        }
+
+        // ── 3D Card Tilting Effect ──
+        const card = document.getElementById('tilt-card');
+        document.addEventListener('mousemove', (e) => {
+            const xAxis = (window.innerWidth / 2 - e.pageX) / 25;
+            const yAxis = (window.innerHeight / 2 - e.pageY) / 25;
+            card.style.transform = `rotateY(${xAxis}deg) rotateX(${yAxis}deg)`;
+        });
+
+        document.addEventListener('mouseleave', () => {
+            card.style.transform = `rotateY(0deg) rotateX(0deg)`;
+            card.style.transition = 'transform 0.5s ease';
+        });
+
+        document.addEventListener('mouseenter', () => {
+            card.style.transition = 'none';
+        });
+
+        // ── Firebase Initialization & Authentication Flow ──
+        let firebaseAuth = null;
+
+        async function initFirebase() {
+            try {
+                // Fetch credentials securely from local backend
+                const response = await fetch('/api/firebase-config');
+                const config = await response.json();
+
+                if (!config.apiKey) {
+                    setupNotice.style.display = 'block';
+                    console.warn("⚠️ Firebase configuration missing! Please fill MONGODB_URI & FIREBASE_* keys in your local .env file.");
+                    return;
+                }
+
+                // Initialize Firebase
+                firebase.initializeApp(config);
+                firebaseAuth = firebase.auth();
+
+                // Redirect to dashboard if user is already logged in
+                firebaseAuth.onAuthStateChanged((user) => {
+                    if (user) {
+                        window.location.href = 'index.html';
+                    }
+                });
+
+            } catch (err) {
+                console.error("Failed to load Firebase credentials:", err);
+                showToast("Connection to authentication backend failed.");
+            }
+        }
+
+        // Form Submit Handler
+        authForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!firebaseAuth) {
+                showToast("Firebase Auth is not configured. Please check your .env file!");
+                return;
+            }
+
+            const email = emailInput.value.trim();
+            const password = passwordInput.value;
+
+            // Show Spinner
+            btnSpinner.style.display = 'inline-block';
+            btnText.style.opacity = '0.5';
+
+            try {
+                if (isSignUpMode) {
+                    // Sign Up
+                    await firebaseAuth.createUserWithEmailAndPassword(email, password);
+                    showToast("Account created successfully! Redirecting...", "success");
+                } else {
+                    // Sign In
+                    await firebaseAuth.signInWithEmailAndPassword(email, password);
+                    showToast("Signed in successfully! Redirecting...", "success");
+                }
+            } catch (error) {
+                showToast(error.message);
+                btnSpinner.style.display = 'none';
+                btnText.style.opacity = '1';
+            }
+        });
+
+        // Initialize on load
+        initFirebase();
+    </script>
+</body>
+</html>
