@@ -2,11 +2,11 @@ name: "🧪 DairyDash — Full Test Reports Dashboard"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # BRANCH STRATEGY
-#   main        → Production branch. Auto-triggers on push & PR.
-#   develop     → Integration branch. Auto-triggers on push & PR.
-#   feature/**  → Feature branches. Auto-triggers on push.
-#   hotfix/**   → Hotfix branches. Auto-triggers on push & PR to main.
-#   Manual      → Can be triggered manually on any branch via workflow_dispatch.
+#   main / master → Production. Triggers on push & PR.
+#   develop       → Integration. Triggers on push & PR.
+#   feature/**    → Feature development. Triggers on push.
+#   hotfix/**     → Emergency fixes. Triggers on push & PR to main.
+#   Manual        → Any branch via workflow_dispatch.
 # ─────────────────────────────────────────────────────────────────────────────
 on:
   push:
@@ -28,20 +28,43 @@ on:
         required: false
         default: "Manual trigger"
 
+# ─────────────────────────────────────────────────────────────────────────────
+# WORKFLOW GRAPH  (what you see in the Actions UI)
+#
+#        ┌─────────────────────┐
+#        │   setup_and_verify  │
+#        └──────────┬──────────┘
+#          ┌────────┴────────┐
+#          ▼                 ▼
+#   ┌─────────────┐   ┌─────────────┐
+#   │ appium_tests│   │selenium_tests│
+#   └──────┬──────┘   └──────┬──────┘
+#          │                 │
+#          ▼                 ▼
+#   ┌─────────────┐   ┌─────────────┐
+#   │  load_tests │   │security_tests│
+#   └──────┬──────┘   └──────┬──────┘
+#          └────────┬────────┘
+#                   ▼
+#        ┌──────────────────────┐
+#        │  publish_summary     │
+#        └──────────────────────┘
+#
+# ─────────────────────────────────────────────────────────────────────────────
+
 jobs:
+
   # ═══════════════════════════════════════════════════════════════════════════
-  # JOB 1: UPLOAD & PUBLISH ALL 4 REPORTS
+  # JOB 1 ─ SETUP & VERIFY  (root of the graph)
   # ═══════════════════════════════════════════════════════════════════════════
-  publish_reports:
-    name: "📊 Parse & Publish 4 Test Reports to Summary"
+  setup_and_verify:
+    name: "🔍 Setup & Verify Report Files"
     runs-on: ubuntu-latest
 
     steps:
-      # ── 1. Checkout ────────────────────────────────────────────────────────
       - name: "🔀 Checkout Repository"
         uses: actions/checkout@v4
 
-      # ── 2. Python Setup ────────────────────────────────────────────────────
       - name: "🐍 Set up Python 3.12"
         uses: actions/setup-python@v5
         with:
@@ -52,10 +75,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install openpyxl pandas
 
-      # ── 3. Verify report files exist ───────────────────────────────────────
-      - name: "🔍 Verify Report Files"
+      - name: "🔍 Verify All 4 Report Files Exist"
         run: |
-          echo "Checking for required report files..."
+          echo "=== Checking for required report files ==="
           FILES=(
             "appiumtest/appium report.xlsx"
             "appiumtest/selineum report.xlsx"
@@ -73,17 +95,87 @@ jobs:
             fi
           done
           if [ "$ALL_FOUND" = false ]; then
-            echo "⚠️ Some report files are missing but workflow will continue."
+            echo "⚠️  Some report files are missing — pipeline will continue."
           else
-            echo "✅ All 4 report files are present!"
+            echo "✅ All 4 report files verified!"
           fi
 
-      # ── 4. Parse reports and write to GitHub Step Summary ─────────────────
-      - name: "📝 Generate Full Report Dashboard (Step Summary)"
-        run: python appiumtest/publish_all_reports.py
+  # ═══════════════════════════════════════════════════════════════════════════
+  # JOB 2 ─ APPIUM MOBILE BRANCH  (left branch)
+  # ═══════════════════════════════════════════════════════════════════════════
+  appium_tests:
+    name: "📱 Appium Mobile E2E (400 Cases)"
+    runs-on: ubuntu-latest
+    needs: setup_and_verify
 
-      # ── 5. Upload all 4 reports as downloadable artifacts ─────────────────
-      - name: "📱 Upload — Appium Mobile E2E Report"
+    steps:
+      - name: "🔀 Checkout Repository"
+        uses: actions/checkout@v4
+
+      - name: "🐍 Set up Python 3.12"
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: "📦 Install Dependencies"
+        run: pip install openpyxl
+
+      - name: "📊 Parse Appium Report & Write to Summary"
+        run: |
+          python - <<'EOF'
+          import openpyxl, os, sys
+          if hasattr(sys.stdout, 'reconfigure'):
+              sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+          path = "appiumtest/appium report.xlsx"
+          if not os.path.isfile(path):
+              print("❌ File not found:", path); exit(0)
+          wb = openpyxl.load_workbook(path, data_only=True)
+
+          # Module Summary
+          ws_mod = wb["Module Summary"]
+          mod_rows = list(ws_mod.iter_rows(values_only=True))
+          headers_mod = [str(c) for c in mod_rows[1]]
+          mod_data = [dict(zip(headers_mod, r)) for r in mod_rows[2:] if any(c for c in r)]
+
+          # Test Results
+          ws_tc = wb["Test Results"]
+          tc_rows = list(ws_tc.iter_rows(values_only=True))
+          headers_tc = [str(c) for c in tc_rows[1]]
+          tc_data = [dict(zip(headers_tc, r)) for r in tc_rows[2:] if any(c for c in r)]
+
+          passed = sum(1 for r in tc_data if "PASS" in str(r.get("Status","")).upper())
+          failed = sum(1 for r in tc_data if "FAIL" in str(r.get("Status","")).upper())
+          total  = len(tc_data)
+          rate   = f"{(passed/total*100):.1f}%" if total else "N/A"
+
+          sf = os.environ.get("GITHUB_STEP_SUMMARY")
+          out = open(sf,"a",encoding="utf-8") if sf else None
+          def w(line=""):
+              print(line)
+              if out: out.write(line+"\n")
+
+          w("## 📱 Appium Mobile E2E Report — 400 Test Cases")
+          w(f"**Total:** {total} &nbsp;|&nbsp; ✅ **Passed:** {passed} &nbsp;|&nbsp; ❌ **Failed:** {failed} &nbsp;|&nbsp; 📈 **Pass Rate:** {rate}\n")
+
+          w("### Module-wise Results")
+          w("| Module | Total | Passed | Failed | Errors | Pass % |")
+          w("|---|---|---|---|---|---|")
+          for r in mod_data:
+              w(f"| {r.get('Module')} | {r.get('Total')} | ✅ {r.get('Passed')} | ❌ {r.get('Failed')} | ⚠️ {r.get('Errors')} | **{r.get('Pass %')}** |")
+          w()
+
+          w(f"### All {total} Test Cases")
+          w("| TC ID | Module | Test Title | Status | Duration |")
+          w("|---|---|---|---|---|")
+          for r in tc_data:
+              status = r.get("Status","")
+              emoji  = "✅ PASS" if "PASS" in str(status).upper() else ("❌ FAIL" if "FAIL" in str(status).upper() else f"🔵 {status}")
+              title  = str(r.get("Test Title","")).replace("|","\\|")[:90]
+              w(f"| `{r.get('TC ID')}` | {r.get('Module')} | {title} | {emoji} | {r.get('Duration')} |")
+          if out: out.close()
+          EOF
+
+      - name: "📱 Upload Appium Report Artifact"
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -92,7 +184,80 @@ jobs:
           if-no-files-found: warn
           retention-days: 90
 
-      - name: "🌐 Upload — Selenium Web E2E Report"
+  # ═══════════════════════════════════════════════════════════════════════════
+  # JOB 3 ─ SELENIUM WEB BRANCH  (right branch)
+  # ═══════════════════════════════════════════════════════════════════════════
+  selenium_tests:
+    name: "🌐 Selenium Web E2E (400 Cases)"
+    runs-on: ubuntu-latest
+    needs: setup_and_verify
+
+    steps:
+      - name: "🔀 Checkout Repository"
+        uses: actions/checkout@v4
+
+      - name: "🐍 Set up Python 3.12"
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: "📦 Install Dependencies"
+        run: pip install openpyxl
+
+      - name: "📊 Parse Selenium Report & Write to Summary"
+        run: |
+          python - <<'EOF'
+          import openpyxl, os, sys
+          if hasattr(sys.stdout, 'reconfigure'):
+              sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+          path = "appiumtest/selineum report.xlsx"
+          if not os.path.isfile(path):
+              print("❌ File not found:", path); exit(0)
+          wb = openpyxl.load_workbook(path, data_only=True)
+
+          ws_mod = wb["Module Summary"]
+          mod_rows = list(ws_mod.iter_rows(values_only=True))
+          headers_mod = [str(c) for c in mod_rows[1]]
+          mod_data = [dict(zip(headers_mod, r)) for r in mod_rows[2:] if any(c for c in r)]
+
+          ws_tc = wb["Test Results"]
+          tc_rows = list(ws_tc.iter_rows(values_only=True))
+          headers_tc = [str(c) for c in tc_rows[1]]
+          tc_data = [dict(zip(headers_tc, r)) for r in tc_rows[2:] if any(c for c in r)]
+
+          passed = sum(1 for r in tc_data if "PASS" in str(r.get("Status","")).upper())
+          failed = sum(1 for r in tc_data if "FAIL" in str(r.get("Status","")).upper())
+          total  = len(tc_data)
+          rate   = f"{(passed/total*100):.1f}%" if total else "N/A"
+
+          sf = os.environ.get("GITHUB_STEP_SUMMARY")
+          out = open(sf,"a",encoding="utf-8") if sf else None
+          def w(line=""):
+              print(line)
+              if out: out.write(line+"\n")
+
+          w("## 🌐 Selenium Web E2E Report — 400 Test Cases")
+          w(f"**Total:** {total} &nbsp;|&nbsp; ✅ **Passed:** {passed} &nbsp;|&nbsp; ❌ **Failed:** {failed} &nbsp;|&nbsp; 📈 **Pass Rate:** {rate}\n")
+
+          w("### Module-wise Results")
+          w("| Module | Total | Passed | Failed | Errors | Pass % |")
+          w("|---|---|---|---|---|---|")
+          for r in mod_data:
+              w(f"| {r.get('Module')} | {r.get('Total')} | ✅ {r.get('Passed')} | ❌ {r.get('Failed')} | ⚠️ {r.get('Errors')} | **{r.get('Pass %')}** |")
+          w()
+
+          w(f"### All {total} Test Cases")
+          w("| TC ID | Module | Test Title | Status | Duration |")
+          w("|---|---|---|---|---|")
+          for r in tc_data:
+              status = r.get("Status","")
+              emoji  = "✅ PASS" if "PASS" in str(status).upper() else ("❌ FAIL" if "FAIL" in str(status).upper() else f"🔵 {status}")
+              title  = str(r.get("Test Title","")).replace("|","\\|")[:90]
+              w(f"| `{r.get('TC ID')}` | {r.get('Module')} | {title} | {emoji} | {r.get('Duration')} |")
+          if out: out.close()
+          EOF
+
+      - name: "🌐 Upload Selenium Report Artifact"
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -101,7 +266,67 @@ jobs:
           if-no-files-found: warn
           retention-days: 90
 
-      - name: "⚡ Upload — Baseline Load Test Report (PASS ONLY)"
+  # ═══════════════════════════════════════════════════════════════════════════
+  # JOB 4 ─ LOAD TEST BRANCH  (depends on appium — continues left branch)
+  # ═══════════════════════════════════════════════════════════════════════════
+  load_tests:
+    name: "⚡ Baseline Load Test (400 Cases)"
+    runs-on: ubuntu-latest
+    needs: appium_tests
+
+    steps:
+      - name: "🔀 Checkout Repository"
+        uses: actions/checkout@v4
+
+      - name: "🐍 Set up Python 3.12"
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: "📦 Install Dependencies"
+        run: pip install openpyxl
+
+      - name: "📊 Parse Load Test Report & Write to Summary"
+        run: |
+          python - <<'EOF'
+          import openpyxl, os, sys
+          if hasattr(sys.stdout, 'reconfigure'):
+              sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+          path = "appiumtest/Baseline_Load_Test_PASS_ONLY_20260622_140125.xlsx"
+          if not os.path.isfile(path):
+              print("❌ File not found:", path); exit(0)
+          wb = openpyxl.load_workbook(path, data_only=True)
+          ws_tc = wb["400 Test Cases"]
+          tc_rows = list(ws_tc.iter_rows(values_only=True))
+          headers_tc = [str(c) for c in tc_rows[1]]
+          tc_data = [dict(zip(headers_tc, r)) for r in tc_rows[2:] if any(c for c in r)]
+
+          passed = sum(1 for r in tc_data if "PASS" in str(r.get("Result","")).upper())
+          failed = sum(1 for r in tc_data if "FAIL" in str(r.get("Result","")).upper())
+          total  = len(tc_data)
+          rate   = f"{(passed/total*100):.1f}%" if total else "N/A"
+
+          sf = os.environ.get("GITHUB_STEP_SUMMARY")
+          out = open(sf,"a",encoding="utf-8") if sf else None
+          def w(line=""):
+              print(line)
+              if out: out.write(line+"\n")
+
+          w("## ⚡ Baseline Load Test Report — 400 Test Cases (PASS ONLY)")
+          w(f"**Total:** {total} &nbsp;|&nbsp; ✅ **Passed:** {passed} &nbsp;|&nbsp; ❌ **Failed:** {failed} &nbsp;|&nbsp; 📈 **Pass Rate:** {rate}\n")
+          w("### All Test Cases")
+          w("| TC # | Test Case Name | Category | Endpoint | Method | Resp Time (ms) | Result |")
+          w("|---|---|---|---|---|---|---|")
+          for r in tc_data:
+              result = r.get("Result","")
+              emoji  = "✅ PASS" if "PASS" in str(result).upper() else ("❌ FAIL" if "FAIL" in str(result).upper() else f"🔵 {result}")
+              name   = str(r.get("Test Case Name","")).replace("|","\\|")[:80]
+              ep     = str(r.get("Endpoint","")).replace("|","\\|")[:50]
+              w(f"| `{r.get('TC #')}` | {name} | {r.get('Category')} | `{ep}` | **{r.get('Method')}** | {r.get('Response Time (ms)')} | {emoji} |")
+          if out: out.close()
+          EOF
+
+      - name: "⚡ Upload Load Test Report Artifact"
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -110,7 +335,80 @@ jobs:
           if-no-files-found: warn
           retention-days: 90
 
-      - name: "🛡️ Upload — Security Control Test Cases Report (v2)"
+  # ═══════════════════════════════════════════════════════════════════════════
+  # JOB 5 ─ SECURITY BRANCH  (depends on selenium — continues right branch)
+  # ═══════════════════════════════════════════════════════════════════════════
+  security_tests:
+    name: "🛡️ Security Control Tests (400 Cases v2)"
+    runs-on: ubuntu-latest
+    needs: selenium_tests
+
+    steps:
+      - name: "🔀 Checkout Repository"
+        uses: actions/checkout@v4
+
+      - name: "🐍 Set up Python 3.12"
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: "📦 Install Dependencies"
+        run: pip install openpyxl
+
+      - name: "📊 Parse Security Report & Write to Summary"
+        run: |
+          python - <<'EOF'
+          import openpyxl, os, sys
+          if hasattr(sys.stdout, 'reconfigure'):
+              sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+          path = "appiumtest/Security_Control_Test_Cases_Report_400_v2.xlsx"
+          if not os.path.isfile(path):
+              print("❌ File not found:", path); exit(0)
+          wb = openpyxl.load_workbook(path, data_only=True)
+          ws_tc = wb["Security Test Results"]
+          tc_rows = list(ws_tc.iter_rows(values_only=True))
+          headers_tc = [str(c) for c in tc_rows[1]]
+          tc_data = [dict(zip(headers_tc, r)) for r in tc_rows[2:] if any(c for c in r)]
+
+          passed = sum(1 for r in tc_data if "PASS" in str(r.get("Verdict","")).upper())
+          failed = sum(1 for r in tc_data if "FAIL" in str(r.get("Verdict","")).upper())
+          total  = len(tc_data)
+          rate   = f"{(passed/total*100):.1f}%" if total else "N/A"
+
+          sev_counts = {}
+          for r in tc_data:
+              s = str(r.get("Severity","Unknown")).strip()
+              sev_counts[s] = sev_counts.get(s, 0) + 1
+
+          sf = os.environ.get("GITHUB_STEP_SUMMARY")
+          out = open(sf,"a",encoding="utf-8") if sf else None
+          def w(line=""):
+              print(line)
+              if out: out.write(line+"\n")
+
+          w("## 🛡️ Security Control Test Cases Report — 400 Cases (v2)")
+          w(f"**Total:** {total} &nbsp;|&nbsp; ✅ **Passed:** {passed} &nbsp;|&nbsp; ❌ **Failed:** {failed} &nbsp;|&nbsp; 📈 **Pass Rate:** {rate}\n")
+          w("### Severity Breakdown")
+          w("| Severity | Count |")
+          w("|---|---|")
+          SEV_EMOJI = {"Critical":"🔴","High":"🟠","Medium":"🟡","Low":"🟢","Info":"🔵"}
+          for sev, cnt in sorted(sev_counts.items()):
+              w(f"| {SEV_EMOJI.get(sev,'⚪')} {sev} | **{cnt}** |")
+          w()
+          w("### All Test Cases")
+          w("| Test ID | Component / Route | Control Area | Description | Severity | Verdict |")
+          w("|---|---|---|---|---|---|")
+          for r in tc_data:
+              verdict = r.get("Verdict","")
+              emoji   = "✅ PASS" if "PASS" in str(verdict).upper() else ("❌ FAIL" if "FAIL" in str(verdict).upper() else f"🔵 {verdict}")
+              sev     = str(r.get("Severity","")).strip()
+              desc    = str(r.get("Description / Vulnerability Audited","")).replace("|","\\|")[:100]
+              comp    = str(r.get("Component / Route","")).replace("|","\\|")[:50]
+              w(f"| `{r.get('Test ID')}` | {comp} | {r.get('Control Area')} | {desc} | {SEV_EMOJI.get(sev,'⚪')} {sev} | {emoji} |")
+          if out: out.close()
+          EOF
+
+      - name: "🛡️ Upload Security Report Artifact"
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -119,8 +417,20 @@ jobs:
           if-no-files-found: warn
           retention-days: 90
 
-      - name: "📦 Upload — All 4 Reports (Combined Bundle)"
-        if: always()
+  # ═══════════════════════════════════════════════════════════════════════════
+  # JOB 6 ─ FINAL SUMMARY  (merges all branches — leaf of the graph)
+  # ═══════════════════════════════════════════════════════════════════════════
+  publish_summary:
+    name: "📋 Final Summary & Combined Artifact"
+    runs-on: ubuntu-latest
+    needs: [load_tests, security_tests]
+    if: always()
+
+    steps:
+      - name: "🔀 Checkout Repository"
+        uses: actions/checkout@v4
+
+      - name: "📦 Upload All 4 Reports — Combined Bundle"
         uses: actions/upload-artifact@v4
         with:
           name: "ALL-4-DairyDash-Test-Reports"
@@ -132,31 +442,37 @@ jobs:
           if-no-files-found: warn
           retention-days: 90
 
-      # ── 6. Append branch & trigger info to summary ─────────────────────────
-      - name: "🌿 Append Branch & Trigger Info to Summary"
+      - name: "📋 Write Final Pipeline Summary"
         if: always()
         run: |
+          echo "## 🏁 DairyDash — Pipeline Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| 📱 Appium Mobile E2E | ${{ needs.appium_tests.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🌐 Selenium Web E2E  | ${{ needs.selenium_tests.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| ⚡ Load Tests        | ${{ needs.load_tests.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🛡️ Security Tests    | ${{ needs.security_tests.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "---" >> $GITHUB_STEP_SUMMARY
-          echo "## 🌿 Workflow Trigger & Branch Information" >> $GITHUB_STEP_SUMMARY
+          echo "## 🌿 Branch & Trigger Info" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|---|---|" >> $GITHUB_STEP_SUMMARY
-          echo "| 🔀 Branch | \`${{ github.ref_name }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| ⚡ Trigger | \`${{ github.event_name }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| 🔨 Commit SHA | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| 👤 Triggered By | \`${{ github.actor }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| 📁 Repository | \`${{ github.repository }}\` |" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "| 📝 Manual Note | ${{ github.event.inputs.branch_note }} |" >> $GITHUB_STEP_SUMMARY
-          fi
+          echo "| 🔀 Branch      | \`${{ github.ref_name }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| ⚡ Trigger     | \`${{ github.event_name }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🔨 Commit SHA  | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| 👤 Actor       | \`${{ github.actor }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| 📁 Repository  | \`${{ github.repository }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 🌿 Branch Strategy Reference" >> $GITHUB_STEP_SUMMARY
+          echo "### 🌿 Workflow Branch Strategy" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Branch Pattern | Purpose | Auto-Triggers |" >> $GITHUB_STEP_SUMMARY
+          echo "| Branch Pattern | Purpose | Triggers |" >> $GITHUB_STEP_SUMMARY
           echo "|---|---|---|" >> $GITHUB_STEP_SUMMARY
-          echo "| \`main\` / \`master\` | 🚀 Production — stable releases | Push + PR |" >> $GITHUB_STEP_SUMMARY
-          echo "| \`develop\` | 🔧 Integration — merges from feature branches | Push + PR |" >> $GITHUB_STEP_SUMMARY
-          echo "| \`feature/**\` | ✨ Feature development | Push only |" >> $GITHUB_STEP_SUMMARY
-          echo "| \`hotfix/**\` | 🚑 Emergency production fixes | Push + PR to main |" >> $GITHUB_STEP_SUMMARY
-          echo "| Any branch | 🖱️ Manual run via workflow_dispatch | Manual only |" >> $GITHUB_STEP_SUMMARY
+          echo "| \`main\` / \`master\` | 🚀 Production — stable releases     | Push + PR |" >> $GITHUB_STEP_SUMMARY
+          echo "| \`develop\`          | 🔧 Integration — feature merges     | Push + PR |" >> $GITHUB_STEP_SUMMARY
+          echo "| \`feature/**\`       | ✨ Feature development              | Push only |" >> $GITHUB_STEP_SUMMARY
+          echo "| \`hotfix/**\`        | 🚑 Emergency production fixes       | Push + PR to main |" >> $GITHUB_STEP_SUMMARY
+          echo "| Any branch         | 🖱️ Manual via workflow_dispatch     | Manual only |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📦 All 4 Excel reports uploaded as downloadable artifacts — see the **Artifacts** section above." >> $GITHUB_STEP_SUMMARY
